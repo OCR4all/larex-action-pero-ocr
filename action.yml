@@ -1,0 +1,91 @@
+version: 1
+id: pero-ocr
+name: pero-ocr
+description: Detects text regions and lines and recognizes their text with pero-ocr engines.
+tags:
+  - Segmentation
+  - OCR
+  - HTR
+targets:
+  - PAGE
+  - REGION
+  - TEXT_LINE
+
+endpoint:
+  url: https://larex.example.org/pero-ocr/dispatch
+  healthUrl: https://larex.example.org/pero-ocr/health
+  preflightUrl: https://larex.example.org/pero-ocr/preflight
+  parameterValuesUrl: https://larex.example.org/pero-ocr/parameter-values
+  timeoutSeconds: 30
+  auth:
+    type: hmac
+    secretRef: pero-ocr-v1
+
+access:
+  execute: CURATOR
+
+locking:
+  mode: PAGES
+
+inputs:
+  images:
+    level: required
+    preferredImageType: COLOR
+  xml:
+    level: optional
+    requiredForTargets:
+      - REGION
+      - TEXT_LINE
+
+outputs:
+  xml:
+    enabled: true
+    overwrites:
+      PAGE: [REGIONS, READING_ORDER]
+      REGION: [TEXT_LINES]
+      TEXT_LINE: [TEXT]
+  images:
+    enabled: false
+  files:
+    enabled: false
+
+concurrency:
+  maxActiveRuns: 1
+  scope: GLOBAL
+
+parameters:
+  engine:
+    type: string
+    description: pero-ocr engine installed on the processor. Choose one trained on similar material.
+    allowedValues:
+      provider: engines
+  segmentation:
+    type: string
+    default: auto
+    description: What to segment before recognition. Selected lines are never segmented, selected regions keep their outline.
+    allowedValues:
+      values:
+        - value: auto
+          label: Only where missing
+        - value: regions
+          label: Detect regions and lines again
+        - value: lines
+          label: Detect lines again
+        - value: keep
+          label: Keep existing segmentation
+  recognition:
+    type: boolean
+    default: true
+    description: Recognize the text of all lines in scope. Turn off to run the segmentation only.
+  textIndex:
+    type: integer
+    default: 1
+    min: 0
+    max: 1000
+    description: TextEquiv index the recognized text is stored under. Index 0 usually holds the ground truth and is replaced when chosen here.
+  minConfidence:
+    type: number
+    default: 0
+    min: 0
+    max: 1
+    description: Leave out newly detected lines that were recognized with a lower confidence. Existing lines are always kept.

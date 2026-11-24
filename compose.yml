@@ -1,0 +1,40 @@
+services:
+  action:
+    container_name: larex-action-${NAME:?No name defined}
+    image: larex-action-pero-ocr:cpu
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        FLAVOR: cpu
+    env_file:
+      - .env
+    ports:
+      - "${PORT:?No port defined}:9000"
+    volumes:
+      - ${MODEL_DIR:?No model directory defined}:/models:ro
+    tmpfs:
+      - /tmp:size=2g
+    read_only: true
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  models:
+    profiles:
+      - setup
+    image: larex-action-pero-ocr:cpu
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        FLAVOR: cpu
+    user: "${MODEL_UID:-10001}:${MODEL_GID:-10001}"
+    command: ["python", "-m", "larex_action.models", "download"]
+    volumes:
+      - ${MODEL_DIR:?No model directory defined}:/models
+    init: true

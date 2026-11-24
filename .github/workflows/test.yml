@@ -1,0 +1,63 @@
+name: Test
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.9.17"
+
+jobs:
+  test:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --extra cpu --extra test
+      - name: Lint
+        run: |
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
+      - name: Run tests
+        run: uv run --no-sync pytest
+
+  docker:
+    name: Docker build (${{ matrix.flavor }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [cpu, gpu]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Build image
+        run: docker build --build-arg FLAVOR=${{ matrix.flavor }} --tag larex-action-pero-ocr:test .
+      - name: Start container
+        run: |
+          docker run --detach --name action --read-only --tmpfs /tmp \
+            --env LAREX_PROCESSOR_ID=pero-ocr \
+            --env LAREX_DISPATCH_HMAC_SECRET=test-dispatch-secret \
+            --env 'LAREX_ALLOWED_CALLBACK_ORIGINS=["https://larex.example.org"]' \
+            larex-action-pero-ocr:test
+          for _ in $(seq 30); do
+            [ "$(docker inspect --format '{{.State.Health.Status}}' action)" = healthy ] && exit 0
+            sleep 2
+          done
+          docker logs action
+          exit 1
+      - name: Load pero-ocr
+        run: docker exec action python -c "import larex_action.pipeline"

@@ -1,0 +1,103 @@
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
+
+[project]
+name = "larex-action-pero-ocr"
+version = "0.1.0"
+description = "Layout analysis and text recognition with pero-ocr for LAREX"
+readme = "README.md"
+authors = [
+    { name = "OCR4all", email = "ocr4all@uni-wuerzburg.de" }
+]
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "larex-action-sdk[fastapi]>=0.30.0,<0.31",
+    "httpx>=0.28,<1",
+    "lxml>=5,<7",
+    "numpy>=2,<3",
+    "opencv-python-headless>=4.10,<6",
+    "pero-ocr==0.7.0",
+    "pillow>=11,<14",
+    "pydantic-settings>=2.16.0",
+    "scipy>=1.14,<2",
+    "shapely>=2,<3",
+    "uvicorn>=0.54.0",
+]
+
+[project.optional-dependencies]
+cpu = ["torch==2.13.0"]
+gpu = ["torch==2.13.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'"]
+test = [
+    "pytest>=8,<9",
+    "pytest-asyncio>=1,<2",
+    "pyyaml>=6,<7",
+    "ruff>=0.12,<1",
+]
+
+[tool.uv]
+conflicts = [[{ extra = "cpu" }, { extra = "gpu" }]]
+environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+override-dependencies = [
+    "imgaug ; sys_platform == 'never'",
+    "levenshtein ; sys_platform == 'never'",
+    "lmdb ; sys_platform == 'never'",
+    "opencv-python ; sys_platform == 'never'",
+    "pyamg ; sys_platform == 'never'",
+    "safe-gpu ; sys_platform == 'never'",
+    "torchvision ; sys_platform == 'never'",
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", extra = "cpu", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cuda", extra = "gpu", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu129"
+explicit = true
+
+[tool.uv.build-backend]
+module-name = "larex_action"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = "-q"
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.semantic_release]
+build_command = """
+python -m pip install --disable-pip-version-check \"uv>=0.8,<1\"
+uv lock --upgrade-package \"$PACKAGE_NAME\"
+git add uv.lock
+uv build
+"""
+commit_message = "chore(release): {version}"
+allow_zero_version = true
+major_on_zero = false
+tag_format = "v{version}"
+version_toml = ["pyproject.toml:project.version"]

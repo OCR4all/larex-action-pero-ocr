@@ -1,0 +1,8 @@
+services:
+  action:
+    image: larex-action-pero-ocr:gpu
+    build:
+      args:
+        FLAVOR: gpu
+    devices:
+      - nvidia.com/gpu=all
