@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from page_fixtures import assert_valid, texts
 from stub_engine import draw_page, encode
 
-import larex_action
+from larex_action import main
 from larex_action.config import env
 
 SECRET = 'test-dispatch-secret'
@@ -28,7 +28,7 @@ def larex(monkeypatch):
 
 @pytest.fixture
 def client(installed_engines):
-    with TestClient(larex_action.app) as test_client:
+    with TestClient(main.app) as test_client:
         yield test_client
 
 
@@ -69,7 +69,7 @@ def test_dispatches_with_a_wrong_signature_are_refused(client, larex):
     assert larex.results == []
 
 
-def test_signed_run_with_a_real_worker(client, larex):
+def test_signed_run_with_a_real_worker(client, larex, capfd):
     pages = [
         (encode(draw_page([('ab', 20, 60), ('bba', 20, 100)])), None),
         (b'not an image', None),
@@ -95,3 +95,4 @@ def test_signed_run_with_a_real_worker(client, larex):
     assert final[0]['status'] == 'completed'
     assert final[0]['message'] == 'Processed 2/4 page(s) with full'
     assert larex.heartbeats
+    assert 'Loaded engine full on cpu' in capfd.readouterr().err

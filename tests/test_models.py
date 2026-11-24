@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: MIT
 import hashlib
+import os
+import subprocess
+import sys
 import zipfile
 
 import httpx
@@ -56,3 +59,19 @@ def test_incomplete_archives_are_refused(tmp_path):
         target.writestr('config.ini', '')
     with pytest.raises(models.ModelDownloadError, match='does not contain OCR_350000.pt'):
         models.install_engine(path, tmp_path / 'models')
+
+
+def test_download_needs_no_processor_settings(tmp_path):
+    engine = tmp_path / models.ENGINE_NAME
+    engine.mkdir()
+    for name in models.ENGINE_FILES:
+        (engine / name).touch()
+    environment = {name: value for name, value in os.environ.items() if not name.startswith(('LAREX_', 'PERO_'))}
+    result = subprocess.run(
+        [sys.executable, '-m', 'larex_action.models', 'download', '--directory', str(tmp_path)],
+        env=environment,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert 'is installed' in result.stdout

@@ -61,3 +61,5 @@ jobs:
           exit 1
       - name: Load pero-ocr
         run: docker exec action python -c "import larex_action.pipeline"
+      - name: Start the model command without settings
+        run: docker run --rm larex-action-pero-ocr:test python -m larex_action.models --help

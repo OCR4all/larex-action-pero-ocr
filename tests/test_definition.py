@@ -5,7 +5,6 @@ from typing import get_args
 import pytest
 import yaml
 
-import larex_action  # noqa: F401
 from larex_action.config import Settings
 from larex_action.jobs import Segmentation, Target
 from larex_action.runner import RunParameters

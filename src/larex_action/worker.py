@@ -9,9 +9,9 @@ from .config import env
 from .engines import Engine
 from .errors import PageInputError, PageSkipped
 from .jobs import PageJob, Stage
+from .logs import configure_logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG if env.ACTION_DEBUG else logging.INFO)
 
 MAX_MESSAGE_LENGTH = 500
 DEFAULT_MAX_CPU_THREADS = 4
@@ -60,6 +60,7 @@ def _report(connection: Connection, status: WorkerStatus) -> bool:
 
 
 def worker(connection: Connection, settings: WorkerSettings) -> None:
+    configure_logging()
     logger.debug('Initialize worker')
 
     try:
